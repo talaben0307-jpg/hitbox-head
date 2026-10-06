@@ -1,0 +1,245 @@
+-- Fluent UI - Gojo Target Lock + Hitbox Head Expander & ESP
+-- Created by @bphong0946
+
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Khởi tạo Window Fluent UI
+local Window = Fluent:CreateWindow({
+    Title = "0.2s Gojo Hub | @bphong0946",
+    SubTitle = "⚡ Target Lock & Hitbox Expander",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 400),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.K 
+})
+
+-- Tạo Tabs
+local Tabs = {
+    Farm = Window:AddTab({ Title = "Gojo Farm", Icon = "swords" }),
+    Visuals = Window:AddTab({ Title = "Hitbox / ESP", Icon = "eye" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+}
+
+-- ==========================================
+-- BIẾN CẤU HÌNH
+-- ==========================================
+-- Biến Farm
+local isFarmActive = false
+local currentTarget = nil
+
+-- Biến Hitbox Head
+local isHitboxActive = false
+local hitboxSize = 4 -- Mặc định kích thước 4x4x4
+local useHighlight = true
+
+-- Hàm tìm người chơi sống gần nhất cho Gojo Farm
+local function getClosestTarget()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+    local rootPos = char.HumanoidRootPart.Position
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local targetRoot = player.Character:FindFirstChild("HumanoidRootPart")
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            if targetRoot and humanoid and humanoid.Health > 0 then
+                local distance = (targetRoot.Position - rootPos).Magnitude
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPlayer = player
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
+-- ==========================================
+-- TAB 1: GOJO FARM (Smooth Dash Mode)
+-- ==========================================
+Tabs.Farm:AddParagraph({
+    Title = "Trạng thái Auto Farm",
+    Content = "Lao mượt mà bám sát mục tiêu, tự động chuyển sang người tiếp theo khi mục tiêu chết."
+})
+
+Tabs.Farm:AddToggle("GojoDashToggle", {
+    Title = "Bật/Tắt Smooth Dash Farm",
+    Default = false,
+    Callback = function(Value)
+        isFarmActive = Value
+        if not isFarmActive then
+            currentTarget = nil
+            pcall(function()
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                end
+            end)
+        end
+    end
+})
+
+-- ==========================================
+-- TAB 2: HITBOX / ESP (Tùy chỉnh trực tiếp trong game)
+-- ==========================================
+Tabs.Visuals:AddParagraph({
+    Title = "Mở rộng Hitbox Đầu (Head Expander)",
+    Content = "Phóng to phần đầu đối thủ và bật ESP Highlight để dễ dàng ngắm bắn/tấn công."
+})
+
+-- Toggle Bật/Tắt Hitbox Expander
+Tabs.Visuals:AddToggle("HitboxToggle", {
+    Title = "Bật/Tắt Head Hitbox Expander",
+    Default = false,
+    Callback = function(Value)
+        isHitboxActive = Value
+        if not isHitboxActive then
+            -- Trả lại kích thước gốc khi tắt
+            pcall(function()
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character then
+                        local head = player.Character:FindFirstChild("Head")
+                        if head then
+                            head.Size = Vector3.new(2, 1, 1) -- Kích thước mặc định của R6/R15 Head
+                            local hl = head:FindFirstChild("HeadHighlight")
+                            if hl then hl:Destroy() end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+})
+
+-- Slider tùy chỉnh độ to Hitbox trực tiếp trong game
+Tabs.Visuals:AddSlider("HitboxSizeSlider", {
+    Title = "Kích thước Hitbox Đầu (Size)",
+    Description = "Kéo để chỉnh độ to nhỏ của hitbox đầu đối thủ",
+    Default = 4,
+    Min = 2,
+    Max = 15,
+    Rounding = 1,
+    Callback = function(Value)
+        hitboxSize = Value
+    end
+})
+
+-- Toggle bật/tắt ESP Highlight màu đỏ quanh đầu
+Tabs.Visuals:AddToggle("ESPHighlightToggle", {
+    Title = "Bật/Tắt ESP Highlight Quanh Đầu",
+    Default = true,
+    Callback = function(Value)
+        useHighlight = Value
+        if not useHighlight then
+            pcall(function()
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character then
+                        local head = player.Character:FindFirstChild("Head")
+                        if head then
+                            local hl = head:FindFirstChild("HeadHighlight")
+                            if hl then hl:Destroy() end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+})
+
+-- ==========================================
+-- LOGIC CHẠY NGẦM MỖI FRAME (RENDERSTEPPED)
+-- ==========================================
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        -- 1. Xử lý Gojo Farm
+        if isFarmActive then
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local rootPart = char.HumanoidRootPart
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+
+                local needsNewTarget = false
+                if not currentTarget or not currentTarget.Character then
+                    needsNewTarget = true
+                else
+                    local targetHumanoid = currentTarget.Character:FindFirstChildOfClass("Humanoid")
+                    local targetRoot = currentTarget.Character:FindFirstChild("HumanoidRootPart")
+                    if not targetHumanoid or targetHumanoid.Health <= 0 or not targetRoot then
+                        needsNewTarget = true
+                    end
+                end
+
+                if needsNewTarget then
+                    currentTarget = getClosestTarget()
+                end
+
+                if currentTarget and currentTarget.Character then
+                    local targetRoot = currentTarget.Character:FindFirstChild("HumanoidRootPart")
+                    if targetRoot and humanoid then
+                        local direction = (targetRoot.Position - rootPart.Position)
+                        local distance = direction.Magnitude
+                        
+                        if distance > 3 then
+                            local moveDir = direction.Unit
+                            rootPart.AssemblyLinearVelocity = Vector3.new(moveDir.X * 50, rootPart.AssemblyLinearVelocity.Y, moveDir.Z * 50)
+                            rootPart.CFrame = CFrame.new(rootPart.Position, Vector3.new(targetRoot.Position.X, rootPart.Position.Y, targetRoot.Position.Z))
+                        else
+                            rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                            rootPart.CFrame = targetRoot.CFrame + Vector3.new(0, 0, 2)
+                        end
+                    end
+                end
+            end
+        end
+
+        -- 2. Xử lý Hitbox Expander & ESP
+        if isHitboxActive then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    local character = player.Character
+                    if character then
+                        local head = character:FindFirstChild("Head")
+                        if head and head:IsA("BasePart") then
+                            -- Áp dụng kích thước mới từ Slider
+                            head.Size = Vector3.new(hitboxSize, hitboxSize, hitboxSize)
+                            head.Transparency = 0.5
+                            head.CanCollide = false
+                            
+                            -- Xử lý ESP Highlight
+                            if useHighlight then
+                                local highlight = head:FindFirstChild("HeadHighlight")
+                                if not highlight then
+                                    highlight = Instance.new("Highlight")
+                                    highlight.Name = "HeadHighlight"
+                                    highlight.Adornee = head
+                                    highlight.Parent = head
+                                    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                    highlight.FillTransparency = 0.4
+                                    highlight.OutlineTransparency = 0
+                                end
+                            else
+                                local highlight = head:FindFirstChild("HeadHighlight")
+                                if highlight then highlight:Destroy() end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end)
+
+Window:SelectTab(1)
+Fluent:Notify({
+    Title = "0.2s Gojo Hub",
+    Content = "Đã cập nhật Tab Hitbox & ESP tùy chỉnh trực tiếp!",
+    Duration = 4
+})
