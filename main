@@ -1,21 +1,20 @@
--- Fluent UI - Head Hitbox Expander & ESP Hub
+-- Fluent UI + Meme Custom Background
 -- Created by @bphong0946
 
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
--- Khởi tạo Window Fluent UI riêng cho Hitbox
+-- Khởi tạo Window Fluent UI
 local Window = Fluent:CreateWindow({
     Title = "Hitbox Expander Hub | @bphong0946",
-    SubTitle = "⚡ Head Hitbox & ESP Edition",
+    SubTitle = "⚡ Meme Background Edition",
     TabWidth = 160,
-    Size = UDim2.fromOffset(580, 400),
-    Acrylic = true,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = false, -- Tắt acrylic để thấy rõ ảnh meme phía sau
     Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.K 
+    MinimizeKey = Enum.KeyCode.H
 })
 
 -- Tạo Tabs
@@ -25,34 +24,64 @@ local Tabs = {
 }
 
 -- ==========================================
+-- TỰ ĐỘNG CHÈN ẢNH NỀN MEME TÙY CHỈNH
+-- ==========================================
+task.spawn(function()
+    pcall(function()
+        local CoreGui = game:GetService("CoreGui")
+        local guiParent = CoreGui:FindFirstChild("Fluent") or LocalPlayer.PlayerGui:FindFirstChild("Fluent")
+        
+        if guiParent then
+            -- Tìm Frame chính chứa các tab của Fluent
+            local container = guiParent:FindFirstChild("Container") or guiParent:FindFirstChildWhichIsA("Frame", true)
+            
+            if container then
+                local bgImage = Instance.new("ImageLabel")
+                bgImage.Name = "MemeBackground"
+                bgImage.Size = UDim2.new(1, 0, 1, 0)
+                bgImage.Position = UDim2.new(0, 0, 0, 0)
+                bgImage.BackgroundTransparency = 1
+                
+                -- Đổi ID bên dưới thành Decal ID của bức ảnh meme cậu muốn hiển thị
+                -- (Nếu cậu tải ảnh lên Roblox sẽ nhận được mã rbxassetid://...)
+                bgImage.Image = "rbxassetid://0" -- <-- THAY MÃ ID DECAL ẢNH MEME CỦA CẬU VÀO ĐÂY
+                
+                bgImage.ScaleType = Enum.ScaleType.Crop
+                bgImage.ImageTransparency = 0.35 -- Chỉnh độ mờ của ảnh meme (0 = rõ nét, 1 = tàng hình)
+                bgImage.ZIndex = -1
+                bgImage.Parent = container
+            end
+        end
+    end)
+end)
+
+-- ==========================================
 -- BIẾN CẤU HÌNH HITBOX
 -- ==========================================
 local isHitboxActive = false
-local hitboxSize = 4 -- Mặc định kích thước 4x4x4
+local hitboxSize = 4
 local useHighlight = true
 
 -- ==========================================
--- GIAO DIỆN TAB CHÍNH
+-- TAB CHÍNH: HITBOX & ESP
 -- ==========================================
 Tabs.Main:AddParagraph({
     Title = "Mở rộng Hitbox Đầu (Head Expander)",
     Content = "Phóng to phần đầu đối thủ và bật ESP Highlight trực tiếp để ngắm bắn chuẩn xác."
 })
 
--- Toggle Bật/Tắt Hitbox Expander
 Tabs.Main:AddToggle("HitboxToggle", {
     Title = "Bật/Tắt Head Hitbox Expander",
     Default = false,
     Callback = function(Value)
         isHitboxActive = Value
         if not isHitboxActive then
-            -- Trả lại kích thước gốc khi tắt
             pcall(function()
                 for _, player in ipairs(Players:GetPlayers()) do
                     if player ~= LocalPlayer and player.Character then
                         local head = player.Character:FindFirstChild("Head")
                         if head then
-                            head.Size = Vector3.new(2, 1, 1) -- Kích thước mặc định của Head
+                            head.Size = Vector3.new(2, 1, 1)
                             local hl = head:FindFirstChild("HeadHighlight")
                             if hl then hl:Destroy() end
                         end
@@ -63,10 +92,9 @@ Tabs.Main:AddToggle("HitboxToggle", {
     end
 })
 
--- Slider tùy chỉnh độ to Hitbox trực tiếp trong game
 Tabs.Main:AddSlider("HitboxSizeSlider", {
     Title = "Kích thước Hitbox Đầu (Size)",
-    Description = "Kéo để chỉnh độ to nhỏ của hitbox đầu đối thủ",
+    Description = "Kéo để chỉnh độ to nhỏ của hitbox đầu",
     Default = 4,
     Min = 2,
     Max = 15,
@@ -76,7 +104,6 @@ Tabs.Main:AddSlider("HitboxSizeSlider", {
     end
 })
 
--- Toggle bật/tắt ESP Highlight màu đỏ quanh đầu
 Tabs.Main:AddToggle("ESPHighlightToggle", {
     Title = "Bật/Tắt ESP Highlight Quanh Đầu",
     Default = true,
@@ -111,12 +138,10 @@ RunService.RenderStepped:Connect(function()
                 if character then
                     local head = character:FindFirstChild("Head")
                     if head and head:IsA("BasePart") then
-                        -- Áp dụng kích thước mới từ Slider
                         head.Size = Vector3.new(hitboxSize, hitboxSize, hitboxSize)
                         head.Transparency = 0.5
                         head.CanCollide = false
                         
-                        -- Xử lý ESP Highlight
                         if useHighlight then
                             local highlight = head:FindFirstChild("HeadHighlight")
                             if not highlight then
@@ -142,7 +167,7 @@ end)
 
 Window:SelectTab(1)
 Fluent:Notify({
-    Title = "Hitbox Expander Hub",
-    Content = "Đã khởi chạy giao diện tùy chỉnh Hitbox độc lập thành công!",
+    Title = "Meme Hub Loaded!",
+    Content = "Nhấn phím H để ẩn/hiện menu nhé!",
     Duration = 4
 })
