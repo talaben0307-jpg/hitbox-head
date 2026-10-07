@@ -42,13 +42,13 @@ task.spawn(function()
                 bgImage.Position = UDim2.new(0, 0, 0, 0)
                 bgImage.BackgroundTransparency = 1
                 
-                -- Đổi ID bên dưới thành Decal ID của bức ảnh meme cậu muốn hiển thị
+                -- Đổi ID bên dưới thành Decal ID của bức ảnh meme muốn hiển thị
                 -- (Nếu cậu tải ảnh lên Roblox sẽ nhận được mã rbxassetid://...)
-                bgImage.Image = "rbxassetid://0" -- <-- THAY MÃ ID DECAL ẢNH MEME CỦA CẬU VÀO ĐÂY
+                bgImage.Image = "rbxassetid://8508980536" 
                 
                 bgImage.ScaleType = Enum.ScaleType.Crop
                 bgImage.ImageTransparency = 0.35 -- Chỉnh độ mờ của ảnh meme (0 = rõ nét, 1 = tàng hình)
-                bgImage.ZIndex = -1
+                bgImage.ZIndex = 0
                 bgImage.Parent = container
             end
         end
